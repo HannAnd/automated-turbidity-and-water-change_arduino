@@ -71,103 +71,98 @@ void setup() {
 }
 
 // function for responding to Raspberry Pi commands:
-void serialparse(int command) {
+void turbidread() {
   // creates an unsigned integer for use as a counter:
   uint8_t i;
-  // declaring variables used in serialparse:
+  // declaring variables used in turbidread():
   float ave_turb;
-  float ave_level;
   float voltage_t;
-  //I am not entirely sure yet that this function is properly retrieving these
-  //variable values from the main loop()
-  //float clearwater1;
-  //float blackwater1;
-  //float clearwater2;
-  //float blackwater2;
-  //float clearwater3;
-  //float blackwater3;
 
-  // all commands sent to a switch-case must be integers, no strings:
-  switch(command) {
+  //// reading turbidity sensor 1:
+  Serial.println("check~NA~reading_turbidity");  // telling Pi case 1 has been activated:
+  samples_t[NUMSAMPLES] = 0;
+  analogRead(TURBID1);  // read to align multiplexer to A3:
+  delay(10);
+  analogRead(TURBID1);  // unused reading to deal with ADC lag:
+  delay(50);
+  // collecting sensor readings to average:
+  for (i=0; i< NUMSAMPLES; i++)  {
+    samples_t[i] = analogRead(TURBID1);
+    delay(50);
+  }
 
-  // cases 1 - read all turbidity sensors:
-  // cases 2-n - initiating water changes:
-    // read turbidity sensors:
+  // resetting the average variable between iterations:
+  ave_turb = 0;
+  // averaging the above samples:
+  for (i=0; i< NUMSAMPLES; i++)  {
+    ave_turb += samples_t[i];
+  }
+  ave_turb /= NUMSAMPLES;
+
+  // converting analog readings (which go from 0-1023) to voltages (0-5v):
+  voltage_t = ave_turb*(5.0/1023.0);  //might leave analog readings as-is and learn to just convert NTU from that
+  // sending voltage readings through Serial to the Pi:
+  // characters before ~ interpreted by Pi parser to to understand this
+  // value is a turbidity reading and which chamber it's from:
+  Serial.print("t~1~");
+  Serial.println(voltage_t);
+
+  //// reading turbidity sensor 2:
+  samples_t[NUMSAMPLES] = 0;
+  analogRead(TURBID2);  // read to align multiplexer to A4:
+  delay(10);
+  analogRead(TURBID2);
+  delay(50);
+  for (i=0; i< NUMSAMPLES; i++)  {
+    samples_t[i] = analogRead(TURBID2);
+    delay(50);
+  }
+  ave_turb = 0;
+  for (i=0; i< NUMSAMPLES; i++)  {
+    ave_turb += samples_t[i];
+  }
+  ave_turb /= NUMSAMPLES;
+  voltage_t = ave_turb*(5.0/1023.0);  //might leave analog readings as-is and learn to just convert NTU from that
+  Serial.print("t~2~");
+  Serial.println(voltage_t);
+
+  //// reading turbidity sensor 3:
+  samples_t[NUMSAMPLES] = 0;
+  analogRead(TURBID3);  // read to align multiplexer to A5:
+  delay(10);
+  analogRead(TURBID3);
+  delay(50);
+  for (i=0; i< NUMSAMPLES; i++)  {
+    samples_t[i] = analogRead(TURBID3);
+    delay(50);
+  }
+  ave_turb = 0;
+  for (i=0; i< NUMSAMPLES; i++)  {
+    ave_turb += samples_t[i];
+  }
+  ave_turb /= NUMSAMPLES;
+  voltage_t = ave_turb*(5.0/1023.0);  //might leave analog readings as-is and learn to just convert NTU from that
+  Serial.print("t~3~");
+  Serial.println(voltage_t);
+  
+  // short delay, then sending Pi the signal readings are done:
+  delay(100);
+  Serial.println("r~NA~water_change_ready");
+}
+
+
+// function for initiating water changes
+void waterchange(float clearwater1, float clearwater2, float clearwater3, int changetype) {
+  // creates an unsigned integer for use as a counter:
+  uint8_t i;
+  // declaring variables used in waterchange():
+  float ave_level;
+  
+  //I'm thinking cases 1-3 will be normal water chages,
+  //cases 5-6 will be clearwater-only tanks
+  //and case 7 will be the filming period water drop:
+  switch(changetype) {
     case 1:
-    //// reading turbidity sensor 1:
-    Serial.println("check~NA~reading_turbidity");  // telling Pi case 1 has been activated:
-    samples_t[NUMSAMPLES] = 0;
-    analogRead(TURBID1);  // read to align multiplexer to A3:
-    delay(10);
-    analogRead(TURBID1);  // unused reading to deal with ADC lag:
-    delay(50);
-    // collecting sensor readings to average:
-    for (i=0; i< NUMSAMPLES; i++)  {
-      samples_t[i] = analogRead(TURBID1);
-      delay(50);
-    }
-
-    // resetting the average variable between iterations:
-    ave_turb = 0;
-    // averaging the above samples:
-    for (i=0; i< NUMSAMPLES; i++)  {
-      ave_turb += samples_t[i];
-    }
-    ave_turb /= NUMSAMPLES;
-
-    // converting analog readings (which go from 0-1023) to voltages (0-5v):
-    voltage_t = ave_turb*(5.0/1023.0);  //might leave analog readings as-is and learn to just convert NTU from that
-    // sending voltage readings through Serial to the Pi:
-    // characters before ~ interpreted by Pi parser to to understand this
-    // value is a turbidity reading and which chamber it's from:
-    Serial.print("t~1~");
-    Serial.println(voltage_t);
-
-    //// reading turbidity sensor 2:
-    samples_t[NUMSAMPLES] = 0;
-    analogRead(TURBID2);  // read to align multiplexer to A4:
-    delay(10);
-    analogRead(TURBID2);
-    delay(50);
-    for (i=0; i< NUMSAMPLES; i++)  {
-      samples_t[i] = analogRead(TURBID2);
-      delay(50);
-    }
-    ave_turb = 0;
-    for (i=0; i< NUMSAMPLES; i++)  {
-      ave_turb += samples_t[i];
-    }
-    ave_turb /= NUMSAMPLES;
-    voltage_t = ave_turb*(5.0/1023.0);  //might leave analog readings as-is and learn to just convert NTU from that
-    Serial.print("t~2~");
-    Serial.println(voltage_t);
-
-    //// reading turbidity sensor 3:
-    samples_t[NUMSAMPLES] = 0;
-    analogRead(TURBID3);  // read to align multiplexer to A5:
-    delay(10);
-    analogRead(TURBID3);
-    delay(50);
-    for (i=0; i< NUMSAMPLES; i++)  {
-      samples_t[i] = analogRead(TURBID3);
-      delay(50);
-    }
-    ave_turb = 0;
-    for (i=0; i< NUMSAMPLES; i++)  {
-      ave_turb += samples_t[i];
-    }
-    ave_turb /= NUMSAMPLES;
-    voltage_t = ave_turb*(5.0/1023.0);  //might leave analog readings as-is and learn to just convert NTU from that
-    Serial.print("t~3~");
-    Serial.println(voltage_t);
-    
-    // short delay, then sending Pi the signal Arduino is ready for water changes:
-    delay(100);
-    Serial.println("r~NA~water_change_ready");
-    break;
-
-    // begining water change for tank chamber 1:
-    case 2:
     Serial.println("check~1~water_change");  // status readout for Pi:
     analogRead(ETAPE3);  // read to align multiplexer to A0:
     delay(10);
@@ -263,12 +258,7 @@ void serialparse(int command) {
         delay(50);
       }
     }
-  break;
-
-  //cases 3 & 4 woud be regular water changes for the other chambers
-  //I'm thinking cases 5, 6 & 7 could be water changes for clearwater-only tanks
-    //so like, half the tank's clearwater with one pump and half from another?
-  //then case 8 would be the observation period water drop 
+    break;
   }
 }
 
@@ -289,7 +279,9 @@ void loop() {
     // divides Pi messages into a signpost that defines the message type
     // (everything before the "~")
     // and the main body of the message (everything after the "~"):
-    String signpost = pi_out.substring(0, pi_out.indexOf("~"));
+    String sign = pi_out.substring(0, pi_out.indexOf("~"));
+    // converting signpost to integer for switch-case:
+    int signpost = sign.toInt();
     // the "+1" ensures the "~" is not included in the message
     String message = pi_out.substring(pi_out.indexOf("~") + 1);
     // tells Pi how Arduino divided the received message:
@@ -298,33 +290,45 @@ void loop() {
     Serial.print(",");
     Serial.println(message);
 
-    /// parsing the Pi output based on the signpost:
-    // signpost "a" prefaces commands to start cases in the switch-case:
-    if (signpost.equals("a")) {
-      // converting the Serial string to integer for use by the switch-case:
-      int command = message.toInt();
-      Serial.println("check~NA~integer_conversion");
-      serialparse(command);
-    }
-    // signpost "1" indicates amount of clearwater to add to tank chamber 1:
-    if (signpost.equals("1")) {
+    switch(signpost) {
+      // starting function to gather turbidity readings:
+      case 1:
+      turbidread();
+      break;
+
+      // accepting clear water proportions from Pi for chamber 1:
+      case 2:
       float clearwater1 = message.toFloat();
+      Serial.println("c~1~1");
       Serial.print("check~1~chamber1_clear:");
       Serial.println(clearwater1);
-    }
-    // signpost "2" indicates amount of clearwater to add to tank chamber 2:
-    if (signpost.equals("2")) {
+      break;
+
+      //accepting clear water proportions from Pi for chamber 2:
+      case 3:
       float clearwater2 = message.toFloat();
+      Serial.println("c~2~1");
       Serial.print("check~2~chamber2_clear:");
       Serial.println(clearwater2);
-    }
-    // signpost "3" indicates amoung of clearwater to add to tank chamber 3:
-    if (signpost.equals("3")) {
+      break;
+
+      // accepting clear water proportions from Pi for chamber 3:
+      case 4:
       float clearwater3 = message.toFloat();
+      Serial.println("c~3~1");
       Serial.print("check~3~chamber3_clear:");
       Serial.println(clearwater3);
-    }
+      break;
 
+      // beginning water changes:
+      case 5:
+      // changetype will be used in the waterchange() switch-case to initiate
+      // different types of waterchanges (or the filming water drop) for the
+      // different tank chambers:
+      int changetype = message.toInt();
+      waterchange(clearwater1, clearwater2, clearwater3, changetype);
+      break;
+    }
   }
 
 }
@@ -332,7 +336,7 @@ void loop() {
 //notes: make sure you are calling on the right eTape when testing
 //remember: change back the Case 2 eTape to ETAPE1 for final version!!!
 
-//For some reason the clearup for loop is not properly reading the 
+//so just... check to make sure the re-organizing went well?
 
 //once this is piloted add a failsafe where if a relay is on for too long (pilot water change time)
 //then it automatically turns off (and sends me a message?)
