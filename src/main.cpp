@@ -303,11 +303,9 @@ void loop() {
     // (everything before the "~")
     // and the main body of the message (everything after the "~"):
     String signpost = pi_out.substring(0, pi_out.indexOf("~"));
-    // converting signpost to integer for switch-case:
-    //int signpost = sign.toInt();
-    // the "+1" ensures the "~" is not included in the message
+    // the "+1" ensures the "~" is not included in the message:
     String message = pi_out.substring(pi_out.indexOf("~") + 1);
-    // tells Pi how Arduino divided the received message:
+    // received command readout for Pi:
     Serial.print("check~NA~received:");
     Serial.print(signpost);
     Serial.print(";");
@@ -322,36 +320,35 @@ void loop() {
     if (signpost.equals("2")) {
       float clearwater1 = message.toFloat();
       Serial.print("check~1~chamber1_clear:");
-      Serial.println(clearwater1);
+      Serial.println(clearwater1);  //troubleshooting- values correct here:
       ready = ready + 1;
+      // alerts Pi the Arduino is ready for waterchanges only if
+      // the Arduino has received all three clearwater values:
       if (ready == 3) {
         Serial.println("r~NA~ready_for_waterchanges");
       }
-      //delay(50);
     }
 
-    //accepting clear water proportions from Pi for chamber 2:
+    // accepting clear water proportions from Pi for chamber 2:
     if (signpost.equals("3")) {
       float clearwater2 = message.toFloat();
       Serial.print("check~2~chamber2_clear:");
-      Serial.println(clearwater2);
+      Serial.println(clearwater2);  //*troubleshooting- values correct here:*
       ready = ready + 1;
       if (ready == 3) {
         Serial.println("r~NA~ready_for_waterchanges");
       }
-      //delay(50);
     }
 
     // accepting clear water proportions from Pi for chamber 3:
     if (signpost.equals("4")) {
       float clearwater3 = message.toFloat();
       Serial.print("check~3~chamber3_clear:");
-      Serial.println(clearwater3);
+      Serial.println(clearwater3);  //*troubleshooting- values correct here:*
       ready = ready + 1;
       if (ready == 3) {
         Serial.println("r~NA~ready_for_waterchanges");
       }
-      //delay(50);
     }
 
     // beginning water changes:
@@ -360,22 +357,20 @@ void loop() {
       // different types of waterchanges (or the filming water drop) for the
       // different tank chambers:
       int changetype = message.toInt();
+      //*troubleshooting: values are now 0.00:*
       Serial.print("check~1~clearwater1: ");
       Serial.println(clearwater1);
       Serial.print("check~2~clearwater2: ");
       Serial.println(clearwater2);
       Serial.print("check~3~clearwater3: ");
       Serial.println(clearwater3);
-      //waterchange(clearwater1, clearwater2, clearwater3, changetype);
       waterchange(changetype, clearwater1, clearwater2, clearwater3);
     }
   }
 }
 
 //notes: make sure you are calling on the right eTape when testing
-//remember: change back the Case 2 eTape to ETAPE1 for final version!!!
-
-//so just... check to make sure the re-organizing went well?
+//remember to change waterchange() ETAPE values to correct ones for final version
 
 //once this is piloted add a failsafe where if a relay is on for too long (pilot water change time)
 //then it automatically turns off (and sends me a message?)
