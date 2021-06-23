@@ -28,6 +28,9 @@
 int samples_t[NUMSAMPLES];
 int samples_w[LEVELSAMPLES];
 
+// counts clearwater up values received from Pi:
+int ready = 0;
+
 // defining the digital pins for each relay channel:
 int exfill1  = 2;    // 1-channel relay, chamber 1 exfill pump:
 int exfill2 = 3;     // channel 1 of 8, chamber 2 exfill pump:
@@ -44,6 +47,7 @@ int blackpump3 = 10;    // channel 8 of 8, chamber 3 black infill pump:
 void setup() {
   // opens a port that samples the standard 9600 bits per second:
   Serial.begin(9600);
+
   // AREF hooked into 5V power to reduce sensor noise:
   analogReference(EXTERNAL);
 
@@ -144,19 +148,22 @@ void turbidread() {
   voltage_t = ave_turb*(5.0/1023.0);  //might leave analog readings as-is and learn to just convert NTU from that
   Serial.print("t~3~");
   Serial.println(voltage_t);
-  
-  // short delay, then sending Pi the signal readings are done:
-  delay(100);
-  Serial.println("r~NA~water_change_ready");
 }
 
 
 // function for initiating water changes
-void waterchange(float clearwater1, float clearwater2, float clearwater3, int changetype) {
+void waterchange(int changetype, float clearwater1, float clearwater2, float clearwater3) {
   // creates an unsigned integer for use as a counter:
   uint8_t i;
   // declaring variables used in waterchange():
   float ave_level;
+
+  Serial.print("check~1~in_waterchange(): ");
+  Serial.println(clearwater1);
+  Serial.print("check~2~in_waterchange(): ");
+  Serial.println(clearwater2);
+  Serial.print("check~3~in_waterchange(): ");
+  Serial.println(clearwater3);
   
   //I'm thinking cases 1-3 will be normal water chages,
   //cases 5-6 will be clearwater-only tanks
@@ -164,6 +171,12 @@ void waterchange(float clearwater1, float clearwater2, float clearwater3, int ch
   switch(changetype) {
     case 1:
     Serial.println("check~1~water_change");  // status readout for Pi:
+    Serial.print("check~1~in_case1(): ");
+    Serial.println(clearwater1);
+    Serial.print("check~2~in_case1(): ");
+    Serial.println(clearwater2);
+    Serial.print("check~3~in_case1(): ");
+    Serial.println(clearwater3);
     analogRead(ETAPE3);  // read to align multiplexer to A0:
     delay(10);
     analogRead(ETAPE3);  // unused reading to deal with ADC lag:
@@ -206,7 +219,8 @@ void waterchange(float clearwater1, float clearwater2, float clearwater3, int ch
     // adding clearwater until the value sent by Pi is reached:
     while (clearup == "yes") {
       if (writeonce == "on") {
-        Serial.println("check~1~clearup_started");
+        Serial.print("check~1~clearup_started");
+        Serial.println(clearwater1);
         writeonce = "off";
       }
       digitalWrite(clearpump1, LOW);
@@ -265,6 +279,15 @@ void waterchange(float clearwater1, float clearwater2, float clearwater3, int ch
 // runs repeatedly:
 void loop() {
   int command;
+  int signpost;
+  String message;
+  String clear1;
+  String clear2;
+  String clear3;
+  float clearwater1;
+  float clearwater2;
+  float clearwater3;
+
   // checking if Raspberry Pi has sent anything through Serial:
   if (Serial.available() > 0) {
     // saving Pi command:
@@ -279,58 +302,74 @@ void loop() {
     // divides Pi messages into a signpost that defines the message type
     // (everything before the "~")
     // and the main body of the message (everything after the "~"):
-    String sign = pi_out.substring(0, pi_out.indexOf("~"));
+    String signpost = pi_out.substring(0, pi_out.indexOf("~"));
     // converting signpost to integer for switch-case:
-    int signpost = sign.toInt();
+    //int signpost = sign.toInt();
     // the "+1" ensures the "~" is not included in the message
     String message = pi_out.substring(pi_out.indexOf("~") + 1);
     // tells Pi how Arduino divided the received message:
-    Serial.print("check~NA~");
+    Serial.print("check~NA~received:");
     Serial.print(signpost);
-    Serial.print(",");
+    Serial.print(";");
     Serial.println(message);
 
-    switch(signpost) {
-      // starting function to gather turbidity readings:
-      case 1:
+    // starting function to gather turbidity readings:
+    if (signpost.equals("1")) {
       turbidread();
-      break;
+    }
 
-      // accepting clear water proportions from Pi for chamber 1:
-      case 2:
+    // accepting clear water proportions from Pi for chamber 1:
+    if (signpost.equals("2")) {
       float clearwater1 = message.toFloat();
-      Serial.println("c~1~1");
       Serial.print("check~1~chamber1_clear:");
       Serial.println(clearwater1);
-      break;
+      ready = ready + 1;
+      if (ready == 3) {
+        Serial.println("r~NA~ready_for_waterchanges");
+      }
+      //delay(50);
+    }
 
-      //accepting clear water proportions from Pi for chamber 2:
-      case 3:
+    //accepting clear water proportions from Pi for chamber 2:
+    if (signpost.equals("3")) {
       float clearwater2 = message.toFloat();
-      Serial.println("c~2~1");
       Serial.print("check~2~chamber2_clear:");
       Serial.println(clearwater2);
-      break;
+      ready = ready + 1;
+      if (ready == 3) {
+        Serial.println("r~NA~ready_for_waterchanges");
+      }
+      //delay(50);
+    }
 
-      // accepting clear water proportions from Pi for chamber 3:
-      case 4:
+    // accepting clear water proportions from Pi for chamber 3:
+    if (signpost.equals("4")) {
       float clearwater3 = message.toFloat();
-      Serial.println("c~3~1");
       Serial.print("check~3~chamber3_clear:");
       Serial.println(clearwater3);
-      break;
+      ready = ready + 1;
+      if (ready == 3) {
+        Serial.println("r~NA~ready_for_waterchanges");
+      }
+      //delay(50);
+    }
 
-      // beginning water changes:
-      case 5:
+    // beginning water changes:
+    if (signpost.equals("5") and ready == 3) {
       // changetype will be used in the waterchange() switch-case to initiate
       // different types of waterchanges (or the filming water drop) for the
       // different tank chambers:
       int changetype = message.toInt();
-      waterchange(clearwater1, clearwater2, clearwater3, changetype);
-      break;
+      Serial.print("check~1~clearwater1: ");
+      Serial.println(clearwater1);
+      Serial.print("check~2~clearwater2: ");
+      Serial.println(clearwater2);
+      Serial.print("check~3~clearwater3: ");
+      Serial.println(clearwater3);
+      //waterchange(clearwater1, clearwater2, clearwater3, changetype);
+      waterchange(changetype, clearwater1, clearwater2, clearwater3);
     }
   }
-
 }
 
 //notes: make sure you are calling on the right eTape when testing
