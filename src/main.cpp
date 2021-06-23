@@ -157,13 +157,6 @@ void waterchange(int changetype, float clearwater1, float clearwater2, float cle
   uint8_t i;
   // declaring variables used in waterchange():
   float ave_level;
-
-  Serial.print("check~1~in_waterchange(): ");
-  Serial.println(clearwater1);
-  Serial.print("check~2~in_waterchange(): ");
-  Serial.println(clearwater2);
-  Serial.print("check~3~in_waterchange(): ");
-  Serial.println(clearwater3);
   
   //I'm thinking cases 1-3 will be normal water chages,
   //cases 5-6 will be clearwater-only tanks
@@ -171,12 +164,6 @@ void waterchange(int changetype, float clearwater1, float clearwater2, float cle
   switch(changetype) {
     case 1:
     Serial.println("check~1~water_change");  // status readout for Pi:
-    Serial.print("check~1~in_case1(): ");
-    Serial.println(clearwater1);
-    Serial.print("check~2~in_case1(): ");
-    Serial.println(clearwater2);
-    Serial.print("check~3~in_case1(): ");
-    Serial.println(clearwater3);
     analogRead(ETAPE3);  // read to align multiplexer to A0:
     delay(10);
     analogRead(ETAPE3);  // unused reading to deal with ADC lag:
@@ -318,9 +305,9 @@ void loop() {
 
     // accepting clear water proportions from Pi for chamber 1:
     if (signpost.equals("2")) {
-      float clearwater1 = message.toFloat();
+      clearwater1 = message.toFloat();
       Serial.print("check~1~chamber1_clear:");
-      Serial.println(clearwater1);  //troubleshooting- values correct here:
+      Serial.println(clearwater1);
       ready = ready + 1;
       // alerts Pi the Arduino is ready for waterchanges only if
       // the Arduino has received all three clearwater values:
@@ -331,9 +318,9 @@ void loop() {
 
     // accepting clear water proportions from Pi for chamber 2:
     if (signpost.equals("3")) {
-      float clearwater2 = message.toFloat();
+      clearwater2 = message.toFloat();
       Serial.print("check~2~chamber2_clear:");
-      Serial.println(clearwater2);  //*troubleshooting- values correct here:*
+      Serial.println(clearwater2);
       ready = ready + 1;
       if (ready == 3) {
         Serial.println("r~NA~ready_for_waterchanges");
@@ -342,9 +329,9 @@ void loop() {
 
     // accepting clear water proportions from Pi for chamber 3:
     if (signpost.equals("4")) {
-      float clearwater3 = message.toFloat();
+      clearwater3 = message.toFloat();
       Serial.print("check~3~chamber3_clear:");
-      Serial.println(clearwater3);  //*troubleshooting- values correct here:*
+      Serial.println(clearwater3);
       ready = ready + 1;
       if (ready == 3) {
         Serial.println("r~NA~ready_for_waterchanges");
@@ -357,13 +344,6 @@ void loop() {
       // different types of waterchanges (or the filming water drop) for the
       // different tank chambers:
       int changetype = message.toInt();
-      //*troubleshooting: values are now 0.00:*
-      Serial.print("check~1~clearwater1: ");
-      Serial.println(clearwater1);
-      Serial.print("check~2~clearwater2: ");
-      Serial.println(clearwater2);
-      Serial.print("check~3~clearwater3: ");
-      Serial.println(clearwater3);
       waterchange(changetype, clearwater1, clearwater2, clearwater3);
     }
   }
